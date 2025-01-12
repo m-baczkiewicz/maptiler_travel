@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interaktywna Mapa</title>
+  <script src="https://cdn.maptiler.com/maptiler-sdk-js/v2.5.1/maptiler-sdk.umd.min.js"></script>
+  <link href="https://cdn.maptiler.com/maptiler-sdk-js/v2.5.1/maptiler-sdk.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css" />
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    .maptiler-control-scale {
+      bottom: 10px !important;
+      left: 10px !important;
+    }
+    #map-title {
+      position: absolute;
+      top: 10px;
+      left: 50px;
+      z-index: 1000;
+      background-color: rgba(255, 255, 255, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: Verdana, sans-serif, Helvetica, sans-serif;
+    }
+    #map-title h1 {
+      font-size: 12px;
+      color: #333;
+      margin: 0;
+    }
+    #coords {
+      position: absolute;
+      bottom: 22px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 5px;
+      z-index: 1000;
+      font-family: sans-serif;
+    }
+    #legend {
+        position: absolute;
+        bottom: 30px;
+        left: 10px;
+        background-color: #fff;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        padding: 10px;
+        border-radius: 4px;
+        font-family: sans-serif;
+        z-index: 1000;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #legend.hidden {
+        transform: translateX(-90%);
+    }
+
+    #legend.hidden .legend-content{
+        display: none;
+    }
+    #legend.hidden .legend-toggle{
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+    #legend h4 {
+        margin: 0 0 5px 0;
+        font-size: 16px;
+    }
+    .legend-item {
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+    .legend-item:hover{
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+    .legend-key {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 20%;
+        width: 20px;
+        height: 16px;
+        margin-right: 5px;
+        color: white;
+    }
+    .legend-key i{
+        font-size: 12px;
+    }
+    .legend-toggle {
+        position: absolute;
+        top: 0;
+        right: -30px;
+        width: 30px;
+        height: 30px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-top-right-radius: 4px;
+        border-bottom-right-radius: 4px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+    }
+    .legend-content{
+        transition: opacity 0.3s ease-in-out;
+    }
+    .maptilersdk-popup-content {
+      font-family: sans-serif;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .maptilersdk-popup-content strong {
+      color: #333;
+    }
+    #stats-panel {
+      position: absolute;
+      top: 600px;
+      right: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      font-family: sans-serif;
+      z-index: 1000;
+    }
+    #stats-panel h4 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+    }
+    #stats-panel p {
+      margin: 0 0 3px 0;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map-title">
+    <h1>Zwiedzone kraje Świata</h1>
+  </div>
+  <div id="map"></div>
+  <div id="coords"></div>
+  <div class='map-overlay' id='legend'>
+    <div class="legend-toggle">
+        <i class="fa fa-angle-left"></i>
+    </div>
+    <div class="legend-content"></div>
+  </div>
+  <div id="stats-panel">
+    <h4>Statystyki</h4>
+    <p>Odwiedzone kraje: <span id="visited-countries-count">12/195</span></p>
+    <p>Odwiedzone miasta: <span id="visited-cities-count">0</span></p>
+  </div>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const key = urlParams.get('key') || 'CtJDIjfB4XuVHeNp3gAX';
+ 
+    maptilersdk.config.apiKey = 'CtJDIjfB4XuVHeNp3gAX';
+    const map = new maptilersdk.Map({
+      container: 'map',
+      style: "bdd37f36-0dc6-437e-83be-66799e3262a0", // Styl mapy
+      center: [12.62662018, 49.2125578], // Startowa pozycja [lng, lat]
+      zoom: 3 // Startowy zoom
+    });
+    const coordsDiv = document.getElementById('coords');
+
+    map.on('mousemove', (e) => {
+      const lng = e.lngLat.lng.toFixed(4);
+      const lat = e.lngLat.lat.toFixed(4);
+      coordsDiv.textContent = `Lng: ${lng}, Lat: ${lat}`;
+    });
+
+    const scale = new maptilersdk.ScaleControl({
+      maxWidth: 100,
+      unit: 'metric'
+    });
+    map.addControl(scale);
+
+    map.addControl(new maptilersdk.FullscreenControl(),'top-left');
+
+    map.on('load', () => {
+        const legend = document.getElementById('legend');
+        const legendToggle = document.querySelector('.legend-toggle');
+        const legendContent = document.querySelector('.legend-content');
+        const visitedCitiesCount = document.getElementById('visited-cities-count');
+
+        var tytul = document.createElement('h4');
+        tytul.innerHTML = 'Odwiedzone kraje';
+        legendContent.appendChild(tytul);
+
+        const layers = ['Inne','rok 2023', 'rok 2024', 'rok 2025', 'Miasta']; 
+        const colors = ['#FF9900', '#A02E08', '#C70F24','#B6863E', '#316235']; 
+        const layerIds = ['Kraje','Kraje2', 'Kraje3', 'Kraje4', 'Cities']
+        const icons = ['fa-solid fa-earth-americas','fa-solid fa-calendar-days', 'fa-solid fa-calendar-days', 'fa-solid fa-calendar-days', 'fa-solid fa-city']; // Ikony Font Awesome
+
+        for (let i = 0; i < layers.length; i++) {
+            const layer = layers[i];
+            const color = colors[i];
+            const layerId = layerIds[i];
+            const icon = icons[i];
+
+            const item = document.createElement('div');
+            item.classList.add('legend-item'); 
+
+            const key = document.createElement('span');
+            key.classList.add('legend-key'); 
+            key.style.backgroundColor = color;
+
+            const iconElement = document.createElement('i');
+            iconElement.className = icon;
+            iconElement.style.color = 'black';
+            key.appendChild(iconElement);
+            
+            const updateIconColor = () => {
+              const visibility = map.getLayoutProperty(layerId, 'visibility');
+              iconElement.style.color = visibility === 'none' ? 'gray' : 'black';
+            };
+
+            updateIconColor();
+
+            const value = document.createElement('span');
+            value.innerHTML = layer;
+
+            item.addEventListener('click', () => {
+              const visibility = map.getLayoutProperty(layerId, 'visibility');
+              map.setLayoutProperty(layerId, 'visibility', visibility === 'visible' ? 'none' : 'visible');
+              updateIconColor();
+            });
+
+            item.appendChild(key);
+            item.appendChild(value);
+            legendContent.appendChild(item);
+        }
+
+        legendToggle.addEventListener('click', () => {
+            legend.classList.toggle('hidden');
+            legendToggle.innerHTML = legend.classList.contains('hidden') ? '<i class="fa fa-angle-right"></i>' : '<i class="fa fa-angle-left"></i>';
+        });
+
+      const citiesLayerId = 'Cities';
+
+      map.on('mouseenter', citiesLayerId, () => {
+        map.getCanvas().style.cursor = 'pointer';
+      });
+      map.on('mouseleave', citiesLayerId, () => {
+        map.getCanvas().style.cursor = '';
+      });
+
+      map.on('click', citiesLayerId, (e) => {
+        const coordinates = e.lngLat;
+        const features = map.queryRenderedFeatures(e.point, { layers: [citiesLayerId] });
+        if (features.length > 0) {
+          const feature = features[0];
+
+          function createCityPopupContent(feature) {
+            let content = '';
+            const properties = ['Region', 'Miasto', 'Państwo', 'Okres'];
+
+            for (const prop of properties) {
+                if (feature.properties[prop]) {
+                    content += `<strong>${prop}:</strong> ${feature.properties[prop]}<br>`;
+                }
+            }
+
+            if (feature.properties['Miasto']) {
+                const cityName = feature.properties['Miasto'];
+                const wikiLink = `https://pl.wikipedia.org/wiki/${cityName.replace(/ /g, '_')}`; // Zamiana spacji na _
+                content += `<a href="${wikiLink}" target="_blank">Więcej w Wikipedii</a>`;
+            }
+
+            return content;
+            }
+
+            const popupContent = createCityPopupContent(feature);
+
+            new maptilersdk.Popup({className: 'city-popup'})
+                .setLngLat(coordinates)
+                .setHTML(popupContent)
+                .addTo(map);
+            }
+        });
+
+        const updateStats = () => {
+            let visitedCities = new Set();
+
+            const cityFeatures = map.queryRenderedFeatures({ layers: [citiesLayerId] });
+            for (const feature of cityFeatures) {
+                visitedCities.add(feature.properties.Miasto); 
+            }
+
+            visitedCitiesCount.textContent = visitedCities.size;
+        };
+        updateStats();
+        map.on('data', updateStats);
+    });
+  </script>
+</body>
+</html>

@@ -159,10 +159,12 @@
  
     maptilersdk.config.apiKey = 'CtJDIjfB4XuVHeNp3gAX';
     const map = new maptilersdk.Map({
-      container: 'map',
-      style: "bdd37f36-0dc6-437e-83be-66799e3262a0", // Styl mapy
-      center: [12.62662018, 49.2125578], // Startowa pozycja [lng, lat]
-      zoom: 3 // Startowy zoom
+    container: 'map',
+    style: "bdd37f36-0dc6-437e-83be-66799e3262a0",
+    center: [12.62662018, 49.2125578],
+    zoom: 3,
+    projection: 'globe' // 🔹 To dodaje widok kuli ziemskiej
+
     });
     const coordsDiv = document.getElementById('coords');
 

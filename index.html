@@ -162,10 +162,12 @@
     container: 'map',
     style: "bdd37f36-0dc6-437e-83be-66799e3262a0",
     center: [12.62662018, 49.2125578],
-    zoom: 3,
-    projection: 'globe' // 🔹 To dodaje widok kuli ziemskiej
+zoom: 3,
+});
 
-    });
+map.on('style.load', () => {
+  map.setProjection('globe');
+});
     const coordsDiv = document.getElementById('coords');
 
     map.on('mousemove', (e) => {
